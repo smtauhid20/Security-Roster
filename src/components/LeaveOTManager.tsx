@@ -19,6 +19,8 @@ export const LeaveOTManager: React.FC<Props> = ({ staff, posts, leaves, setLeave
   const [replacementStaffId, setReplacementStaffId] = useState('');
   const [leavePost, setLeavePost] = useState('');
   const [leaveShift, setLeaveShift] = useState<ShiftType>('A');
+  const [leaveStartDate, setLeaveStartDate] = useState('');
+  const [leaveEndDate, setLeaveEndDate] = useState('');
 
   // OT Form
   const [otShift, setOtShift] = useState<ShiftType>('A');
@@ -34,10 +36,14 @@ export const LeaveOTManager: React.FC<Props> = ({ staff, posts, leaves, setLeave
       replacementStaffId: replacementStaffId || undefined,
       postName: leavePost || undefined,
       shiftType: leaveShift,
+      startDate: leaveStartDate || undefined,
+      endDate: leaveEndDate || undefined,
     };
     setLeaves([...leaves, newLeave]);
     setLeaveStaffId('');
     setReplacementStaffId('');
+    setLeaveStartDate('');
+    setLeaveEndDate('');
   };
 
   const addOT = () => {
@@ -107,7 +113,7 @@ export const LeaveOTManager: React.FC<Props> = ({ staff, posts, leaves, setLeave
                 </select>
               </div>
             </div>
-
+            
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">বদলি ডিউটি করবেন (ঐচ্ছিক)</label>
               <select className="w-full p-2 border rounded-md text-sm bg-white" value={replacementStaffId} onChange={e => setReplacementStaffId(e.target.value)}>
@@ -115,12 +121,22 @@ export const LeaveOTManager: React.FC<Props> = ({ staff, posts, leaves, setLeave
                 {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.id})</option>)}
               </select>
             </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">বদলি শুরু তারিখ (ঐচ্ছিক)</label>
+                <input type="date" className="w-full p-2 border rounded-md text-sm bg-white" value={leaveStartDate} onChange={e => setLeaveStartDate(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">বদলি শেষ তারিখ (ঐচ্ছিক)</label>
+                <input type="date" className="w-full p-2 border rounded-md text-sm bg-white" value={leaveEndDate} onChange={e => setLeaveEndDate(e.target.value)} />
+              </div>
+            </div>
 
             <button onClick={addLeave} className="w-full bg-indigo-600 text-white p-2 rounded-md font-medium text-sm hover:bg-indigo-700">
               ছুটি অ্যাড করুন
             </button>
           </div>
-
           <div>
             <h4 className="font-semibold text-slate-700 mb-2">এই সপ্তাহের ছুটিসমূহ ({weekLeaves.length})</h4>
             <ul className="space-y-2">
@@ -132,7 +148,7 @@ export const LeaveOTManager: React.FC<Props> = ({ staff, posts, leaves, setLeave
                     <div>
                       <p className="font-bold text-rose-600">{s?.name || l.staffId} (ছুটি)</p>
                       <p className="text-slate-500 text-xs">শিফট: {l.shiftType} {l.postName ? `| পোস্ট: ${l.postName}` : ''}</p>
-                      {r && <p className="text-emerald-600 font-medium text-xs mt-1">বদলি: {r.name}</p>}
+                      {r && <p className="text-emerald-600 font-medium text-xs mt-1">বদলি: {r.name} {l.startDate && l.endDate ? `(${l.startDate} থেকে ${l.endDate})` : l.startDate ? `(শুরু: ${l.startDate})` : l.endDate ? `(শেষ: ${l.endDate})` : ''}</p>}
                     </div>
                     <button onClick={() => setLeaves(leaves.filter(x => x.id !== l.id))} className="text-rose-500 p-1 hover:bg-rose-100 rounded">
                       <Trash2 className="w-4 h-4"/>

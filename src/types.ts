@@ -38,6 +38,8 @@ export interface LeaveRecord {
   replacementStaffId?: string;
   postName?: string;
   shiftType?: ShiftType;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface OTRecord {

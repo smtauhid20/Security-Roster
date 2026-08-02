@@ -34,7 +34,7 @@ export default function App() {
     }
   }, [weekNumber, startDate]);
   
-  const { staff, setStaff, posts, setPosts, leaves, setLeaves, ots, setOts, isLoaded, saveData, isSaving } = useAppState();
+  const { staff, setStaff, posts, setPosts, leaves, setLeaves, ots, setOts, isLoaded, saveData, isSaving, saveMessage } = useAppState();
 
   const roster = useMemo(() => {
     return generateWeeklyRoster(weekNumber, startDate, staff, posts, leaves, ots);
@@ -49,7 +49,19 @@ export default function App() {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col relative">
+      {saveMessage === 'success' && (
+        <div className="fixed bottom-4 right-4 bg-emerald-600 text-white px-4 py-3 rounded-lg shadow-lg font-medium z-50 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4">
+          <Save className="w-5 h-5" />
+          সকল পরিবর্তন সফলভাবে সেভ হয়েছে!
+        </div>
+      )}
+      {saveMessage === 'error' && (
+        <div className="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg font-medium z-50 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4">
+          <span className="text-xl">⚠️</span>
+          সেভ করতে সমস্যা হয়েছে। দয়া করে আবার চেষ্টা করুন।
+        </div>
+      )}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center py-4 md:py-0 md:h-16 gap-4">

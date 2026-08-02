@@ -12,6 +12,7 @@ export const useAppState = () => {
   const [ots, setOts] = useState<OTRecord[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
 
   // Load initial data once when auth is ready
   useEffect(() => {
@@ -50,6 +51,7 @@ export const useAppState = () => {
 
   const saveData = async () => {
     setIsSaving(true);
+    setSaveMessage('');
     try {
       await setDoc(doc(db, 'shared_roster', 'state'), {
         staff,
@@ -65,14 +67,16 @@ export const useAppState = () => {
       localStorage.setItem('roster_leaves_v2', JSON.stringify(leaves));
       localStorage.setItem('roster_ots_v2', JSON.stringify(ots));
       
-      alert('সকল পরিবর্তন সফলভাবে সেভ হয়েছে!');
+      setSaveMessage('success');
+      setTimeout(() => setSaveMessage(''), 3000);
     } catch (error) {
       console.error("Error saving data:", error);
-      alert('সেভ করতে সমস্যা হয়েছে। দয়া করে আবার চেষ্টা করুন।');
+      setSaveMessage('error');
+      setTimeout(() => setSaveMessage(''), 3000);
     } finally {
       setIsSaving(false);
     }
   };
 
-  return { staff, setStaff, posts, setPosts, leaves, setLeaves, ots, setOts, isLoaded, saveData, isSaving };
+  return { staff, setStaff, posts, setPosts, leaves, setLeaves, ots, setOts, isLoaded, saveData, isSaving, saveMessage };
 };
