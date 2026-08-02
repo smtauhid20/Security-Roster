@@ -16,6 +16,19 @@ export const useAppState = () => {
 
   // Load initial data once when auth is ready
   useEffect(() => {
+    // Load from localStorage as fallback immediately
+    const savedStaff = localStorage.getItem('roster_staff_v2');
+    const savedPosts = localStorage.getItem('roster_posts_v2');
+    const savedLeaves = localStorage.getItem('roster_leaves_v2');
+    const savedOts = localStorage.getItem('roster_ots_v2');
+    
+    if (savedStaff) setStaff(JSON.parse(savedStaff));
+    if (savedPosts) setPosts(JSON.parse(savedPosts));
+    if (savedLeaves) setLeaves(JSON.parse(savedLeaves));
+    if (savedOts) setOts(JSON.parse(savedOts));
+    
+    setIsLoaded(true);
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
@@ -26,22 +39,9 @@ export const useAppState = () => {
             if (data.posts) setPosts(data.posts);
             if (data.leaves) setLeaves(data.leaves);
             if (data.ots) setOts(data.ots);
-          } else {
-            // Fallback to localStorage if exists
-            const savedStaff = localStorage.getItem('roster_staff_v2');
-            const savedPosts = localStorage.getItem('roster_posts_v2');
-            const savedLeaves = localStorage.getItem('roster_leaves_v2');
-            const savedOts = localStorage.getItem('roster_ots_v2');
-            
-            if (savedStaff) setStaff(JSON.parse(savedStaff));
-            if (savedPosts) setPosts(JSON.parse(savedPosts));
-            if (savedLeaves) setLeaves(JSON.parse(savedLeaves));
-            if (savedOts) setOts(JSON.parse(savedOts));
           }
         } catch (error) {
           console.error("Error loading data:", error);
-        } finally {
-          setIsLoaded(true);
         }
       }
     });
