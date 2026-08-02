@@ -29,24 +29,22 @@ export const useAppState = () => {
     
     setIsLoaded(true);
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const docSnap = await getDoc(doc(db, 'shared_roster', 'state'));
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data.staff) setStaff(data.staff);
-            if (data.posts) setPosts(data.posts);
-            if (data.leaves) setLeaves(data.leaves);
-            if (data.ots) setOts(data.ots);
-          }
-        } catch (error) {
-          console.error("Error loading data:", error);
+    const loadData = async () => {
+      try {
+        const docSnap = await getDoc(doc(db, 'shared_roster', 'state'));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.staff) setStaff(data.staff);
+          if (data.posts) setPosts(data.posts);
+          if (data.leaves) setLeaves(data.leaves);
+          if (data.ots) setOts(data.ots);
         }
+      } catch (error) {
+        console.error("Error loading data:", error);
       }
-    });
-
-    return () => unsubscribeAuth();
+    };
+    
+    loadData();
   }, []);
 
   const saveData = async () => {
