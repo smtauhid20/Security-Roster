@@ -120,7 +120,7 @@ export const RosterTable: React.FC<Props> = ({ roster, weekNumber, startDate }) 
                       <td className="px-6 py-3 text-right">
                         <div className="flex justify-end gap-2">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
-                            Gr: {row.permanentGroup === 'Reliever' ? 'রিলেভার' : row.permanentGroup === 'General' ? 'জেনারেল' : row.permanentGroup}
+                            Gr: {row.permanentGroup === 'Reliever' ? 'রিলেভার' : shift === 'General' ? 'General' : row.permanentGroup === 'General' ? 'General' : row.permanentGroup}
                           </span>
                           {row.isOT && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">

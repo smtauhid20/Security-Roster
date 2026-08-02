@@ -103,10 +103,27 @@ export const generateWeeklyRoster = (
     }
   });
 
-  // Process explicit leave replacements
+  // Process explicit leave replacements or automatic fallback
   weekLeaves.forEach(leave => {
-    if (leave.replacementStaffId && leave.shiftType && leave.postName) {
-      const replacementStaff = allStaff.find(s => s.id === leave.replacementStaffId);
+    let replacementId = leave.replacementStaffId;
+    
+    // Automatic fallback if no explicit replacement is provided
+    if (!replacementId && leave.postName) {
+      const postReq = postRequirements.find(p => p.name === leave.postName || p.id === leave.postName);
+      if (postReq && postReq.supportPersons && postReq.supportPersons.length > 0) {
+        // Find an available support person
+        const availableSupport = postReq.supportPersons.find(id => {
+          const staff = allStaff.find(s => s.id === id);
+          return staff && !onLeaveIds.has(staff.id) && !roster.some(r => r.staffId === staff.id && r.isReplacement);
+        });
+        if (availableSupport) {
+          replacementId = availableSupport;
+        }
+      }
+    }
+
+    if (replacementId && leave.shiftType && leave.postName) {
+      const replacementStaff = allStaff.find(s => s.id === replacementId);
       if (replacementStaff && !onLeaveIds.has(replacementStaff.id)) {
         // Remove from normal pool
         (['A', 'B', 'C', 'General'] as ShiftType[]).forEach(shift => {

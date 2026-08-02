@@ -15,6 +15,8 @@ export interface PostRequirement {
   id: string;
   name: string;
   shiftCounts: Record<ShiftType, number>;
+  offDay?: string;
+  supportPersons?: string[];
 }
 
 export interface RosterAssignment {

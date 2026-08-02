@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Calendar, Users, ClipboardList, Download, LayoutDashboard, Settings, Clock4 } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Download, LayoutDashboard, Settings, Clock4, Save } from 'lucide-react';
 import { generateWeeklyRoster } from './utils/rosterAlgorithm';
 import { RosterTable } from './components/RosterTable';
 import { useAppState } from './hooks/useAppState';
@@ -9,6 +9,8 @@ import { PostManager } from './components/PostManager';
 import { LeaveOTManager } from './components/LeaveOTManager';
 
 import { parseLocalDate, formatDate, getEndDate, formatDisplayDate } from './utils/dateUtils';
+
+import { RelieverManager } from './components/RelieverManager';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'roster' | 'staff' | 'posts' | 'leave_ot'>('dashboard');
@@ -32,7 +34,7 @@ export default function App() {
     }
   }, [weekNumber, startDate]);
   
-  const { staff, setStaff, posts, setPosts, leaves, setLeaves, ots, setOts } = useAppState();
+  const { staff, setStaff, posts, setPosts, leaves, setLeaves, ots, setOts, isLoaded, saveData, isSaving } = useAppState();
 
   const roster = useMemo(() => {
     return generateWeeklyRoster(weekNumber, startDate, staff, posts, leaves, ots);
@@ -51,28 +53,48 @@ export default function App() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center py-4 md:py-0 md:h-16 gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-600 rounded-lg text-white">
-                <Calendar className="w-5 h-5" />
+            <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-600 rounded-lg text-white">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <h1 className="text-xl font-bold text-slate-800">সিকিউরিটি রোস্টার প্রো</h1>
               </div>
-              <h1 className="text-xl font-bold text-slate-800">সিকিউরিটি রোস্টার প্রো</h1>
+              <button 
+                onClick={saveData}
+                disabled={isSaving || !isLoaded}
+                className="md:hidden bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-sm font-medium transition-colors shadow-sm disabled:opacity-50 flex items-center gap-1"
+              >
+                <Save className="w-4 h-4" />
+                {isSaving ? 'সেভ হচ্ছে...' : 'সেভ করুন'}
+              </button>
             </div>
-            <nav className="flex space-x-1 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto">
-              {navItems.map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                    activeTab === item.id
-                      ? 'bg-indigo-50 text-indigo-700'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <item.icon className="w-4 h-4" />
-                  {item.label}
-                </button>
-              ))}
-            </nav>
+            <div className="flex items-center gap-4 w-full md:w-auto">
+              <nav className="flex space-x-1 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto flex-1">
+                {navItems.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                      activeTab === item.id
+                        ? 'bg-indigo-50 text-indigo-700'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {item.label}
+                  </button>
+                ))}
+              </nav>
+              <button 
+                onClick={saveData}
+                disabled={isSaving || !isLoaded}
+                className="hidden md:flex bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50 items-center gap-2 whitespace-nowrap"
+              >
+                <Save className="w-4 h-4" />
+                {isSaving ? 'সেভ হচ্ছে...' : 'সকল পরিবর্তন সেভ করুন'}
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -136,12 +158,13 @@ export default function App() {
             </div>
 
             <RosterTable roster={roster} weekNumber={weekNumber} startDate={startDate} />
+            <RelieverManager staff={staff} posts={posts} />
           </div>
         )}
 
         {activeTab === 'staff' && <StaffManager staff={staff} setStaff={setStaff} posts={posts} />}
         
-        {activeTab === 'posts' && <PostManager posts={posts} setPosts={setPosts} />}
+        {activeTab === 'posts' && <PostManager posts={posts} setPosts={setPosts} staff={staff} />}
         
         {activeTab === 'leave_ot' && <LeaveOTManager staff={staff} posts={posts} leaves={leaves} setLeaves={setLeaves} ots={ots} setOts={setOts} />}
       </main>
