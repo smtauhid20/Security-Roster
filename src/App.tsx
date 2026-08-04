@@ -112,7 +112,7 @@ export default function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
-        {activeTab === 'dashboard' && <Dashboard staff={staff} posts={posts} leaves={leaves} ots={ots} />}
+        {activeTab === 'dashboard' && <Dashboard staff={staff} posts={posts} leaves={leaves} ots={ots} roster={roster} />}
         
         {activeTab === 'roster' && (
           <div className="space-y-6">
