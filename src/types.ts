@@ -30,6 +30,9 @@ export interface RosterAssignment {
   isReplacement?: boolean;
   isOT?: boolean;
   isShiftChange?: boolean;
+  leaveStartDate?: string;
+  leaveEndDate?: string;
+  originalPost?: string;
   shiftChangeDates?: string;
 }
 

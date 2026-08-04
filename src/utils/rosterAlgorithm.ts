@@ -65,7 +65,10 @@ export const generateWeeklyRoster = (
         role: staff.role,
         permanentGroup: staff.permanentGroup,
         assignedShift: 'Leave',
-        assignedPost: 'সাপ্তাহিক ছুটি / অনুপস্থিত'
+        assignedPost: 'সাপ্তাহিক ছুটি / অনুপস্থিত',
+        leaveStartDate: weekLeaves.find(l => l.staffId === staff.id)?.startDate,
+        leaveEndDate: weekLeaves.find(l => l.staffId === staff.id)?.endDate,
+        originalPost: staff.subSection
       });
     } else if (changedShiftMap.has(staff.id)) {
       const targetShift = changedShiftMap.get(staff.id)!;

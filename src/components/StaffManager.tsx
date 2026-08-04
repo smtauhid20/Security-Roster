@@ -114,16 +114,19 @@ export const StaffManager: React.FC<Props> = ({ staff, setStaff, posts }) => {
           </div>
           <div className="flex-1 min-w-[150px]">
             <label className="block text-sm font-medium text-slate-700 mb-1">ফিক্সড পোস্ট (ঐচ্ছিক)</label>
-            <select 
+            <input 
+              type="text"
+              list="post-options"
               className="w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border bg-white"
+              placeholder="পোস্টের নাম লিখুন"
               value={newStaff.subSection || ''}
               onChange={e => setNewStaff({...newStaff, subSection: e.target.value})}
-            >
-              <option value="">-- নির্বাচন করুন --</option>
+            />
+            <datalist id="post-options">
               {posts.map(post => (
                 <option key={post.id} value={post.name}>{post.name}</option>
               ))}
-            </select>
+            </datalist>
           </div>
           <div className="flex-1 min-w-[150px]">
             <label className="block text-sm font-medium text-slate-700 mb-1">সাপ্তাহিক ছুটি (ঐচ্ছিক)</label>
@@ -156,6 +159,7 @@ export const StaffManager: React.FC<Props> = ({ staff, setStaff, posts }) => {
           <table className="w-full text-sm text-left">
             <thead className="bg-slate-50 text-slate-600 font-medium border-b border-slate-200 sticky top-0">
               <tr>
+                <th className="px-6 py-3 w-16 text-center">ক্রমিক</th>
                 <th className="px-6 py-3">স্টাফ আইডি</th>
                 <th className="px-6 py-3">নাম</th>
                 <th className="px-6 py-3">পদবী</th>
@@ -166,8 +170,9 @@ export const StaffManager: React.FC<Props> = ({ staff, setStaff, posts }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {staff.map((s) => (
+              {staff.map((s, idx) => (
                 <tr key={s.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-3 text-center text-slate-500">{idx + 1}</td>
                   <td className="px-6 py-3 font-medium text-slate-800">{s.id}</td>
                   
                   {editingId === s.id ? (
@@ -205,16 +210,19 @@ export const StaffManager: React.FC<Props> = ({ staff, setStaff, posts }) => {
                         </select>
                       </td>
                       <td className="px-6 py-3">
-                        <select 
+                        <input 
+                          type="text"
+                          list="post-options-edit"
                           className="w-full rounded-md border-slate-300 shadow-sm p-1 border text-sm bg-white"
+                          placeholder="পোস্টের নাম লিখুন"
                           value={editForm.subSection || ''}
                           onChange={e => setEditForm({...editForm, subSection: e.target.value})}
-                        >
-                          <option value="">--</option>
+                        />
+                        <datalist id="post-options-edit">
                           {posts.map(post => (
                             <option key={post.id} value={post.name}>{post.name}</option>
                           ))}
-                        </select>
+                        </datalist>
                       </td>
                       <td className="px-6 py-3">
                         <select 
