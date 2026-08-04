@@ -34,11 +34,11 @@ export default function App() {
     }
   }, [weekNumber, startDate]);
   
-  const { staff, setStaff, posts, setPosts, leaves, setLeaves, ots, setOts, isLoaded, saveData, isSaving, saveMessage } = useAppState();
+  const { staff, setStaff, posts, setPosts, leaves, setLeaves, ots, setOts, shiftChanges, setShiftChanges, isLoaded, saveData, isSaving, saveMessage } = useAppState();
 
   const roster = useMemo(() => {
-    return generateWeeklyRoster(weekNumber, startDate, staff, posts, leaves, ots);
-  }, [weekNumber, startDate, staff, posts, leaves, ots]);
+    return generateWeeklyRoster(weekNumber, startDate, staff, posts, leaves, ots, shiftChanges);
+  }, [weekNumber, startDate, staff, posts, leaves, ots, shiftChanges]);
 
   const navItems = [
     { id: 'dashboard', label: 'ড্যাশবোর্ড', icon: LayoutDashboard },
@@ -170,7 +170,7 @@ export default function App() {
             </div>
 
             <RosterTable roster={roster} weekNumber={weekNumber} startDate={startDate} />
-            <RelieverManager staff={staff} posts={posts} />
+            <RelieverManager staff={staff} posts={posts} shiftChanges={shiftChanges} weekNumber={weekNumber} />
           </div>
         )}
 
@@ -178,7 +178,7 @@ export default function App() {
         
         {activeTab === 'posts' && <PostManager posts={posts} setPosts={setPosts} staff={staff} />}
         
-        {activeTab === 'leave_ot' && <LeaveOTManager staff={staff} posts={posts} leaves={leaves} setLeaves={setLeaves} ots={ots} setOts={setOts} />}
+        {activeTab === 'leave_ot' && <LeaveOTManager staff={staff} posts={posts} leaves={leaves} setLeaves={setLeaves} ots={ots} setOts={setOts} shiftChanges={shiftChanges} setShiftChanges={setShiftChanges} />}
       </main>
     </div>
   );

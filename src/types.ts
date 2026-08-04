@@ -1,4 +1,4 @@
-export type ShiftType = 'A' | 'B' | 'C' | 'General' | 'Leave' | 'OT';
+export type ShiftType = 'A' | 'B' | 'C' | 'General' | 'Reliever' | 'Leave' | 'OT';
 export type StaffRole = 'Guard' | 'LadyGuard' | 'Supervisor' | 'Officer';
 export type PermanentGroup = 'A' | 'B' | 'C' | 'Reliever' | 'General';
 
@@ -29,6 +29,8 @@ export interface RosterAssignment {
   offDay?: string;
   isReplacement?: boolean;
   isOT?: boolean;
+  isShiftChange?: boolean;
+  shiftChangeDates?: string;
 }
 
 export interface LeaveRecord {
@@ -38,6 +40,18 @@ export interface LeaveRecord {
   replacementStaffId?: string;
   postName?: string;
   shiftType?: ShiftType;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface ShiftChangeRecord {
+  id: string;
+  weekNumber: number;
+  staffId: string;
+  targetShift: ShiftType;
+  targetPost?: string;
+  swappedWithStaffId?: string;
+  swappedFromShift?: ShiftType;
   startDate?: string;
   endDate?: string;
 }

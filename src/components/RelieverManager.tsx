@@ -1,17 +1,38 @@
 import React from 'react';
-import { Staff, PostRequirement } from '../types';
+import { Staff, PostRequirement, ShiftChangeRecord } from '../types';
+import { postRequirements as initialPosts } from '../data';
 
 interface Props {
   staff: Staff[];
   posts: PostRequirement[];
+  shiftChanges: ShiftChangeRecord[];
+  weekNumber: number;
 }
 
-export const RelieverManager: React.FC<Props> = ({ staff, posts }) => {
-  const relievers = staff.filter(s => s.permanentGroup === 'Reliever');
+export const RelieverManager: React.FC<Props> = ({ staff, posts, shiftChanges, weekNumber }) => {
+  const weekShiftChanges = shiftChanges.filter(sc => sc.weekNumber === weekNumber);
+  
+  const changedShiftMap = new Map<string, string>();
+  weekShiftChanges.forEach(sc => {
+    changedShiftMap.set(sc.staffId, sc.targetShift);
+    if (sc.swappedWithStaffId && sc.swappedFromShift) {
+      changedShiftMap.set(sc.swappedWithStaffId, sc.swappedFromShift);
+    }
+  });
+
+  const relievers = staff.filter(s => {
+    if (changedShiftMap.has(s.id)) {
+      return changedShiftMap.get(s.id) === 'Reliever';
+    }
+    return s.permanentGroup === 'Reliever';
+  });
   const days = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
   // Identify all support persons and their status
-  const supportPersonsList = posts.flatMap(p => p.supportPersons || []);
+  const supportPersonsList = posts.flatMap(p => {
+    const initialPost = initialPosts.find(ip => ip.id === p.id);
+    return p.supportPersons || (initialPost ? initialPost.supportPersons : []) || [];
+  });
   const uniqueSupportPersonIds = Array.from(new Set(supportPersonsList)).filter(id => id);
   const supportPersons = uniqueSupportPersonIds.map(id => staff.find(s => s.id === id)).filter(Boolean) as Staff[];
 
@@ -40,45 +61,43 @@ export const RelieverManager: React.FC<Props> = ({ staff, posts }) => {
                     {days.map(day => {
                       // Find staff who are off on this day and whose subSection matches what this reliever covers
                       const offStaff = staff.filter(s => {
-                        if (s.permanentGroup === 'Reliever') return false;
+                        const isSReliever = changedShiftMap.has(s.id) ? changedShiftMap.get(s.id) === 'Reliever' : s.permanentGroup === 'Reliever';
+                        if (isSReliever) return false;
                         if (s.offDay !== day) return false;
                         
-                        const rSub = (r.subSection || '').toLowerCase();
+                        const supportedPosts = posts.filter(p => {
+                          const initialPost = initialPosts.find(ip => ip.id === p.id);
+                          const supports = p.supportPersons || (initialPost ? initialPost.supportPersons : []) || [];
+                          return supports.includes(r.id);
+                        });
                         const sSub = (s.subSection || '').toLowerCase();
+                        if (r.id === '314842' && s.role === 'LadyGuard') return true;
                         
-                        if (rSub === sSub) return true;
-                        if (rSub.includes(sSub) || sSub.includes(rSub)) return true;
-                        
-                        const rPostMatches = rSub.match(/post-?\s*\d+/g) || [];
-                        const sPostMatches = sSub.match(/post-?\s*\d+/g) || [];
-                        
-                        for (const rpm of rPostMatches) {
-                           if (sSub.includes(rpm)) return true;
-                        }
-                        for (const spm of sPostMatches) {
-                           if (rSub.includes(spm)) return true;
-                        }
-                        return false;
+                        return supportedPosts.some(p => {
+                          const pName = p.name.toLowerCase();
+                          return sSub.includes(pName) || pName.includes(sSub) || 
+                                 (sSub.includes('post-') && pName.includes('post-') && sSub.match(/\d+/) && pName.match(/\d+/) && sSub.match(/\d+/)?.[0] === pName.match(/\d+/)?.[0]);
+                        });
                       });
 
-                      let text = '-';
+                      let elements: React.ReactNode = <span className="text-slate-400">-</span>;
                       if (r.offDay === day) {
-                        text = 'Weekly Off';
+                        elements = <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">অফ ডে</span>;
                       } else if (offStaff.length > 0) {
-                        text = offStaff.map(s => `${s.name} (${s.id})`).join(', ');
+                        elements = (
+                          <div className="flex flex-col gap-1">
+                            {offStaff.map(s => (
+                              <span key={s.id} className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-indigo-100 text-indigo-800 text-left">
+                                {s.name} ({s.id}) - {s.subSection || 'Unknown'}
+                              </span>
+                            ))}
+                          </div>
+                        );
                       }
                       
                       return (
-                        <td key={day} className="px-4 py-3 text-center">
-                          {text === 'Weekly Off' ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">অফ ডে</span>
-                          ) : text !== '-' ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-indigo-100 text-indigo-800 whitespace-nowrap">
-                              {text}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400">-</span>
-                          )}
+                        <td key={day} className="px-4 py-3 text-center align-top">
+                          {elements}
                         </td>
                       );
                     })}
@@ -110,7 +129,11 @@ export const RelieverManager: React.FC<Props> = ({ staff, posts }) => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {supportPersons.map(sp => {
-                  const assignedPostsForSupport = posts.filter(p => (p.supportPersons || []).includes(sp.id));
+                  const assignedPostsForSupport = posts.filter(p => {
+                    const initialPost = initialPosts.find(ip => ip.id === p.id);
+                    const supports = p.supportPersons || (initialPost ? initialPost.supportPersons : []) || [];
+                    return supports.includes(sp.id);
+                  });
                   return (
                     <tr key={sp.id} className="hover:bg-slate-50">
                       <td className="px-4 py-3 font-medium text-slate-800">{sp.name} ({sp.id})</td>

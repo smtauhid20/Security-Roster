@@ -1,4 +1,4 @@
-import { Staff, ShiftType, PostRequirement, RosterAssignment, PermanentGroup, LeaveRecord, OTRecord } from '../types';
+import { Staff, ShiftType, PostRequirement, RosterAssignment, PermanentGroup, LeaveRecord, OTRecord, ShiftChangeRecord } from '../types';
 
 export const generateWeeklyRoster = (
   weekNumber: number,
@@ -6,11 +6,13 @@ export const generateWeeklyRoster = (
   allStaff: Staff[],
   postRequirements: PostRequirement[],
   leaves: LeaveRecord[],
-  ots: OTRecord[]
+  ots: OTRecord[],
+  shiftChanges: ShiftChangeRecord[] = []
 ): RosterAssignment[] => {
   const roster: RosterAssignment[] = [];
   const weekLeaves = leaves.filter(l => l.weekNumber === weekNumber);
   const weekOts = ots.filter(o => o.weekNumber === weekNumber);
+  const weekShiftChanges = shiftChanges.filter(sc => sc.weekNumber === weekNumber);
   
   const rotationCycle = (weekNumber - 1) % 3;
   
@@ -39,12 +41,20 @@ export const generateWeeklyRoster = (
     B: [],
     C: [],
     General: [],
+    Reliever: [],
     Leave: [],
     OT: []
   };
   
   const relievers: Staff[] = [];
   const onLeaveIds = new Set(weekLeaves.map(l => l.staffId));
+  const changedShiftMap = new Map<string, ShiftType>();
+  weekShiftChanges.forEach(sc => {
+    changedShiftMap.set(sc.staffId, sc.targetShift);
+    if (sc.swappedWithStaffId && sc.swappedFromShift) {
+      changedShiftMap.set(sc.swappedWithStaffId, sc.swappedFromShift);
+    }
+  });
 
   allStaff.forEach(staff => {
     if (onLeaveIds.has(staff.id)) {
@@ -57,6 +67,17 @@ export const generateWeeklyRoster = (
         assignedShift: 'Leave',
         assignedPost: 'সাপ্তাহিক ছুটি / অনুপস্থিত'
       });
+    } else if (changedShiftMap.has(staff.id)) {
+      const targetShift = changedShiftMap.get(staff.id)!;
+      if (['A', 'B', 'C', 'General', 'Reliever'].includes(targetShift)) {
+        if (targetShift === 'Reliever') {
+          relievers.push(staff);
+        } else {
+          shiftPools[targetShift].push(staff);
+        }
+      } else {
+        shiftPools.General.push(staff);
+      }
     } else if (staff.permanentGroup === 'Reliever') {
       relievers.push(staff);
     } else if (staff.permanentGroup === 'General') {
@@ -243,5 +264,25 @@ export const generateWeeklyRoster = (
     }
   });
 
-  return roster;
+  // Enrich roster with shift change markers
+  const enrichedRoster = roster.map(r => {
+    const shiftChange = weekShiftChanges.find(sc => sc.staffId === r.staffId || sc.swappedWithStaffId === r.staffId);
+    if (shiftChange && r.assignedShift !== 'Leave' && !r.isOT && !r.isReplacement) {
+      let dates = '';
+      if (shiftChange.startDate) {
+        dates += `শুরু: ${shiftChange.startDate}`;
+      }
+      if (shiftChange.endDate) {
+        dates += dates ? ` | শেষ: ${shiftChange.endDate}` : `শেষ: ${shiftChange.endDate}`;
+      }
+      return {
+        ...r,
+        isShiftChange: true,
+        shiftChangeDates: dates || undefined
+      };
+    }
+    return r;
+  });
+
+  return enrichedRoster;
 };

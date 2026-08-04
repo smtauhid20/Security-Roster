@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Staff, PostRequirement, LeaveRecord, OTRecord } from '../types';
+import { Staff, PostRequirement, LeaveRecord, OTRecord, ShiftChangeRecord } from '../types';
 import { allStaff as initialStaff, postRequirements as initialPosts } from '../data';
 import { db, auth } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -10,6 +10,7 @@ export const useAppState = () => {
   const [posts, setPosts] = useState<PostRequirement[]>(initialPosts);
   const [leaves, setLeaves] = useState<LeaveRecord[]>([]);
   const [ots, setOts] = useState<OTRecord[]>([]);
+  const [shiftChanges, setShiftChanges] = useState<ShiftChangeRecord[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
@@ -21,11 +22,13 @@ export const useAppState = () => {
     const savedPosts = localStorage.getItem('roster_posts_v2');
     const savedLeaves = localStorage.getItem('roster_leaves_v2');
     const savedOts = localStorage.getItem('roster_ots_v2');
+    const savedShiftChanges = localStorage.getItem('roster_shift_changes_v2');
     
     if (savedStaff) setStaff(JSON.parse(savedStaff));
     if (savedPosts) setPosts(JSON.parse(savedPosts));
     if (savedLeaves) setLeaves(JSON.parse(savedLeaves));
     if (savedOts) setOts(JSON.parse(savedOts));
+    if (savedShiftChanges) setShiftChanges(JSON.parse(savedShiftChanges));
     
     setIsLoaded(true);
 
@@ -38,6 +41,7 @@ export const useAppState = () => {
           if (data.posts) setPosts(data.posts);
           if (data.leaves) setLeaves(data.leaves);
           if (data.ots) setOts(data.ots);
+          if (data.shiftChanges) setShiftChanges(data.shiftChanges);
         }
       } catch (error) {
         console.error("Error loading data:", error);
@@ -51,11 +55,19 @@ export const useAppState = () => {
     setIsSaving(true);
     setSaveMessage('');
     try {
+      // Strip undefined values which Firebase rejects
+      const sanitizedStaff = JSON.parse(JSON.stringify(staff));
+      const sanitizedPosts = JSON.parse(JSON.stringify(posts));
+      const sanitizedLeaves = JSON.parse(JSON.stringify(leaves));
+      const sanitizedOts = JSON.parse(JSON.stringify(ots));
+      const sanitizedShiftChanges = JSON.parse(JSON.stringify(shiftChanges));
+
       await setDoc(doc(db, 'shared_roster', 'state'), {
-        staff,
-        posts,
-        leaves,
-        ots,
+        staff: sanitizedStaff,
+        posts: sanitizedPosts,
+        leaves: sanitizedLeaves,
+        ots: sanitizedOts,
+        shiftChanges: sanitizedShiftChanges,
         updatedAt: new Date().toISOString()
       }, { merge: true });
       
@@ -64,6 +76,7 @@ export const useAppState = () => {
       localStorage.setItem('roster_posts_v2', JSON.stringify(posts));
       localStorage.setItem('roster_leaves_v2', JSON.stringify(leaves));
       localStorage.setItem('roster_ots_v2', JSON.stringify(ots));
+      localStorage.setItem('roster_shift_changes_v2', JSON.stringify(shiftChanges));
       
       setSaveMessage('success');
       setTimeout(() => setSaveMessage(''), 3000);
@@ -76,5 +89,5 @@ export const useAppState = () => {
     }
   };
 
-  return { staff, setStaff, posts, setPosts, leaves, setLeaves, ots, setOts, isLoaded, saveData, isSaving, saveMessage };
+  return { staff, setStaff, posts, setPosts, leaves, setLeaves, ots, setOts, shiftChanges, setShiftChanges, isLoaded, saveData, isSaving, saveMessage };
 };

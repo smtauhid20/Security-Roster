@@ -18,6 +18,7 @@ export const RosterTable: React.FC<Props> = ({ roster, weekNumber, startDate }) 
       B: [],
       C: [],
       General: [],
+      Reliever: [],
       Leave: [],
       OT: []
     };
@@ -42,6 +43,7 @@ export const RosterTable: React.FC<Props> = ({ roster, weekNumber, startDate }) 
     B: { title: 'B (Evening)', time: 'বিকাল ৩টা - রাত ১১টা', color: 'bg-amber-100 text-amber-800' },
     C: { title: 'C (Night)', time: 'রাত ১১টা - সকাল ৬টা', color: 'bg-indigo-100 text-indigo-800' },
     General: { title: 'General Shift', time: 'সকাল ৮টা - রাত ৮টা', color: 'bg-blue-100 text-blue-800' },
+    Reliever: { title: 'Reliever Shift', time: 'যেকোনো শিফট', color: 'bg-purple-100 text-purple-800' },
     Leave: { title: 'Leave / Off', time: 'ছুটি/অফ', color: 'bg-gray-100 text-gray-800' }
   };
 
@@ -130,6 +132,11 @@ export const RosterTable: React.FC<Props> = ({ roster, weekNumber, startDate }) 
                           {row.isReplacement && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                               <RefreshCcw className="w-3 h-3" /> বদলি
+                            </span>
+                          )}
+                          {row.isShiftChange && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800" title={row.shiftChangeDates}>
+                              <RefreshCcw className="w-3 h-3" /> শিফট পরিবর্তন {row.shiftChangeDates ? `(${row.shiftChangeDates})` : ''}
                             </span>
                           )}
                         </div>

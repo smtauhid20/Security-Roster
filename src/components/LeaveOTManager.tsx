@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Staff, LeaveRecord, OTRecord, PostRequirement, ShiftType } from '../types';
+import { Staff, LeaveRecord, OTRecord, PostRequirement, ShiftType, ShiftChangeRecord } from '../types';
 import { Trash2 } from 'lucide-react';
 
 interface Props {
@@ -9,9 +9,11 @@ interface Props {
   setLeaves: React.Dispatch<React.SetStateAction<LeaveRecord[]>>;
   ots: OTRecord[];
   setOts: React.Dispatch<React.SetStateAction<OTRecord[]>>;
+  shiftChanges: ShiftChangeRecord[];
+  setShiftChanges: React.Dispatch<React.SetStateAction<ShiftChangeRecord[]>>;
 }
 
-export const LeaveOTManager: React.FC<Props> = ({ staff, posts, leaves, setLeaves, ots, setOts }) => {
+export const LeaveOTManager: React.FC<Props> = ({ staff, posts, leaves, setLeaves, ots, setOts, shiftChanges, setShiftChanges }) => {
   const [week, setWeek] = useState(1);
 
   // Leave Form
@@ -26,6 +28,13 @@ export const LeaveOTManager: React.FC<Props> = ({ staff, posts, leaves, setLeave
   const [otShift, setOtShift] = useState<ShiftType>('A');
   const [otPost, setOtPost] = useState('');
   const [otStaffId, setOtStaffId] = useState('');
+
+  // Shift Change Form
+  const [changeStaffId, setChangeStaffId] = useState('');
+  const [changeTargetShift, setChangeTargetShift] = useState<ShiftType>('A');
+  const [changeTargetStaffId, setChangeTargetStaffId] = useState('');
+  const [changeStartDate, setChangeStartDate] = useState('');
+  const [changeEndDate, setChangeEndDate] = useState('');
 
   const addLeave = () => {
     if (!leaveStaffId) return;
@@ -60,8 +69,36 @@ export const LeaveOTManager: React.FC<Props> = ({ staff, posts, leaves, setLeave
     setOtStaffId('');
   };
 
+  const addShiftChange = () => {
+    if (!changeStaffId) return;
+    
+    // Find staff 2's permanent group if swapping
+    const staff1 = staff.find(s => s.id === changeStaffId);
+    const staff2 = changeTargetStaffId ? staff.find(s => s.id === changeTargetStaffId) : null;
+    
+    const targetShiftFor1 = staff2 ? (staff2.permanentGroup === 'Reliever' ? 'General' : (['A', 'B', 'C', 'General'].includes(staff2.permanentGroup) ? staff2.permanentGroup as ShiftType : changeTargetShift)) : changeTargetShift;
+    const targetShiftFor2 = staff1 ? (staff1.permanentGroup === 'Reliever' ? 'General' : (['A', 'B', 'C', 'General'].includes(staff1.permanentGroup) ? staff1.permanentGroup as ShiftType : 'General')) : 'General';
+    
+    const newChange: ShiftChangeRecord = {
+      id: Date.now().toString(),
+      weekNumber: week,
+      staffId: changeStaffId,
+      targetShift: targetShiftFor1,
+      swappedWithStaffId: changeTargetStaffId || undefined,
+      swappedFromShift: staff2 ? targetShiftFor2 : undefined,
+      startDate: changeStartDate || undefined,
+      endDate: changeEndDate || undefined,
+    };
+    setShiftChanges([...shiftChanges, newChange]);
+    setChangeStaffId('');
+    setChangeTargetStaffId('');
+    setChangeStartDate('');
+    setChangeEndDate('');
+  };
+
   const weekLeaves = leaves.filter(l => l.weekNumber === week);
   const weekOts = ots.filter(o => o.weekNumber === week);
+  const weekShiftChanges = shiftChanges.filter(sc => sc.weekNumber === week);
 
   return (
     <div className="space-y-8">
@@ -81,7 +118,7 @@ export const LeaveOTManager: React.FC<Props> = ({ staff, posts, leaves, setLeave
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* LEAVE SECTION */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
           <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b">সাপ্তাহিক ছুটি ইনপুট</h3>
@@ -216,6 +253,98 @@ export const LeaveOTManager: React.FC<Props> = ({ staff, posts, leaves, setLeave
                 );
               })}
               {weekOts.length === 0 && <p className="text-sm text-slate-500">কোন ওভারটাইম নেই</p>}
+            </ul>
+          </div>
+        </div>
+
+        {/* SHIFT CHANGE SECTION */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b">অস্থায়ী শিফট পরিবর্তন</h3>
+          
+          <div className="space-y-4 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-100">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">স্টাফ-১ (যিনি বদলি হবেন)</label>
+              <select className="w-full p-2 border rounded-md text-sm bg-white" value={changeStaffId} onChange={e => setChangeStaffId(e.target.value)}>
+                <option value="">নির্বাচন করুন...</option>
+                {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.id})</option>)}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">স্টাফ-২ (যার সাথে বদলি হবেন - ঐচ্ছিক)</label>
+              <select className="w-full p-2 border rounded-md text-sm bg-white" value={changeTargetStaffId} onChange={e => setChangeTargetStaffId(e.target.value)}>
+                <option value="">নিজেই অন্য শিফটে যাবেন</option>
+                {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.id})</option>)}
+              </select>
+            </div>
+            
+            {!changeTargetStaffId && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">নতুন শিফট</label>
+                <select className="w-full p-2 border rounded-md text-sm bg-white" value={changeTargetShift} onChange={e => setChangeTargetShift(e.target.value as ShiftType)}>
+                  <option value="A">A Shift</option>
+                  <option value="B">B Shift</option>
+                  <option value="C">C Shift</option>
+                  <option value="General">General</option>
+                  <option value="Reliever">Reliever</option>
+                </select>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">শুরু তারিখ</label>
+                <input type="date" className="w-full p-2 border rounded-md text-sm bg-white" value={changeStartDate} onChange={e => setChangeStartDate(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">শেষ তারিখ (ঐচ্ছিক)</label>
+                <input type="date" className="w-full p-2 border rounded-md text-sm bg-white" value={changeEndDate} onChange={e => setChangeEndDate(e.target.value)} />
+              </div>
+            </div>
+
+            <button onClick={addShiftChange} className="w-full bg-blue-600 text-white p-2 rounded-md font-medium text-sm hover:bg-blue-700">
+              শিফট পরিবর্তন অ্যাড করুন
+            </button>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-slate-700 mb-2">এই সপ্তাহের শিফট পরিবর্তন ({weekShiftChanges.length})</h4>
+            <ul className="space-y-2">
+              {weekShiftChanges.map(sc => {
+                const s1 = staff.find(x => x.id === sc.staffId);
+                const s2 = sc.swappedWithStaffId ? staff.find(x => x.id === sc.swappedWithStaffId) : null;
+                return (
+                  <li key={sc.id} className="p-3 border rounded-lg flex justify-between items-center text-sm bg-slate-50">
+                    <div>
+                      {s2 ? (
+                        <>
+                          <p className="font-bold text-blue-600">পারস্পরিক পরিবর্তন</p>
+                          <p className="text-slate-600 text-sm mt-1">
+                            <span className="font-medium">{s1?.name}</span> যাবে <span className="font-bold text-indigo-600">{sc.targetShift}</span> শিফটে
+                          </p>
+                          <p className="text-slate-600 text-sm">
+                            <span className="font-medium">{s2.name}</span> যাবে <span className="font-bold text-indigo-600">{sc.swappedFromShift}</span> শিফটে
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-bold text-blue-600">{s1?.name || sc.staffId}</p>
+                          <p className="text-slate-500 text-xs mt-1">নতুন শিফট: <span className="font-bold">{sc.targetShift}</span> (পূর্বের: {s1?.permanentGroup})</p>
+                        </>
+                      )}
+                      {(sc.startDate || sc.endDate) && (
+                        <p className="text-slate-500 text-xs mt-1">
+                          তারিখ: {sc.startDate ? `শুরু: ${sc.startDate}` : ''} {sc.endDate ? `| শেষ: ${sc.endDate}` : ''}
+                        </p>
+                      )}
+                    </div>
+                    <button onClick={() => setShiftChanges(shiftChanges.filter(x => x.id !== sc.id))} className="text-rose-500 p-1 hover:bg-rose-100 rounded">
+                      <Trash2 className="w-4 h-4"/>
+                    </button>
+                  </li>
+                );
+              })}
+              {weekShiftChanges.length === 0 && <p className="text-sm text-slate-500">কোন শিফট পরিবর্তন নেই</p>}
             </ul>
           </div>
         </div>
