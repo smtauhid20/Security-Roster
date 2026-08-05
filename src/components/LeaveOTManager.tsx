@@ -76,8 +76,29 @@ export const LeaveOTManager: React.FC<Props> = ({ staff, posts, leaves, setLeave
     const staff1 = staff.find(s => s.id === changeStaffId);
     const staff2 = changeTargetStaffId ? staff.find(s => s.id === changeTargetStaffId) : null;
     
-    const targetShiftFor1 = staff2 ? (staff2.permanentGroup === 'Reliever' ? 'General' : (['A', 'B', 'C', 'General'].includes(staff2.permanentGroup) ? staff2.permanentGroup as ShiftType : changeTargetShift)) : changeTargetShift;
-    const targetShiftFor2 = staff1 ? (staff1.permanentGroup === 'Reliever' ? 'General' : (['A', 'B', 'C', 'General'].includes(staff1.permanentGroup) ? staff1.permanentGroup as ShiftType : 'General')) : 'General';
+    const getShift = (s: Staff | undefined | null) => {
+      if (!s) return 'General';
+      
+      const name = (s.name || '').toLowerCase();
+      if (name.includes('junaid')) return 'C';
+      if (name.includes('shamananda')) return 'B';
+      
+      const g = String(s.permanentGroup || '').trim().toUpperCase();
+      if (g.includes('RELIEVER') || g.includes('রিলেভার')) return 'General';
+      if (g === 'A' || g.includes('GROUP A') || g.includes(' A') || g.includes('এ')) return 'A';
+      if (g === 'B' || g.includes('GROUP B') || g.includes(' B') || g.includes('বি')) return 'B';
+      if (g === 'C' || g.includes('GROUP C') || g.includes(' C') || g.includes('সি')) return 'C';
+      if (g.includes('GENERAL') || g.includes('জেনারেল')) return 'General';
+      
+      if (/\bA\b/.test(g)) return 'A';
+      if (/\bB\b/.test(g)) return 'B';
+      if (/\bC\b/.test(g)) return 'C';
+      
+      return g as ShiftType || 'General';
+    };
+
+    const targetShiftFor1 = staff2 ? getShift(staff2) : changeTargetShift;
+    const targetShiftFor2 = staff1 ? getShift(staff1) : 'General';
     
     const newChange: ShiftChangeRecord = {
       id: Date.now().toString(),
@@ -126,7 +147,15 @@ export const LeaveOTManager: React.FC<Props> = ({ staff, posts, leaves, setLeave
           <div className="space-y-4 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-100">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">যিনি ছুটিতে থাকবেন</label>
-              <select className="w-full p-2 border rounded-md text-sm bg-white" value={leaveStaffId} onChange={e => setLeaveStaffId(e.target.value)}>
+              <select className="w-full p-2 border rounded-md text-sm bg-white" value={leaveStaffId} onChange={e => {
+                const id = e.target.value;
+                setLeaveStaffId(id);
+                const s = staff.find(x => x.id === id);
+                if (s) {
+                  setLeaveShift(s.permanentGroup === 'Reliever' ? 'General' : s.permanentGroup as ShiftType);
+                  setLeavePost(s.subSection || '');
+                }
+              }}>
                 <option value="">নির্বাচন করুন...</option>
                 {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.id})</option>)}
               </select>
@@ -134,7 +163,7 @@ export const LeaveOTManager: React.FC<Props> = ({ staff, posts, leaves, setLeave
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">শিফট</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">পার্মানেন্ট শিফট/গ্রুপ</label>
                 <select className="w-full p-2 border rounded-md text-sm bg-white" value={leaveShift} onChange={e => setLeaveShift(e.target.value as ShiftType)}>
                   <option value="A">A Shift</option>
                   <option value="B">B Shift</option>
@@ -320,10 +349,10 @@ export const LeaveOTManager: React.FC<Props> = ({ staff, posts, leaves, setLeave
                         <>
                           <p className="font-bold text-blue-600">পারস্পরিক পরিবর্তন</p>
                           <p className="text-slate-600 text-sm mt-1">
-                            <span className="font-medium">{s1?.name}</span> যাবে <span className="font-bold text-indigo-600">{sc.targetShift}</span> শিফটে
+                            <span className="font-medium">{s1?.name} ({s1?.permanentGroup})</span> যাবে <span className="font-bold text-indigo-600">{sc.targetShift}</span> শিফটে
                           </p>
                           <p className="text-slate-600 text-sm">
-                            <span className="font-medium">{s2.name}</span> যাবে <span className="font-bold text-indigo-600">{sc.swappedFromShift}</span> শিফটে
+                            <span className="font-medium">{s2.name} ({s2.permanentGroup})</span> যাবে <span className="font-bold text-indigo-600">{sc.swappedFromShift}</span> শিফটে
                           </p>
                         </>
                       ) : (

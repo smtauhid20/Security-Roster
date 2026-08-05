@@ -136,13 +136,13 @@ export const StaffManager: React.FC<Props> = ({ staff, setStaff, posts }) => {
               onChange={e => setNewStaff({...newStaff, offDay: e.target.value})}
             >
               <option value="">-- নির্বাচন করুন --</option>
-              <option value="শুক্রবার (Friday)">শুক্রবার (Friday)</option>
-              <option value="শনিবার (Saturday)">শনিবার (Saturday)</option>
-              <option value="রবিবার (Sunday)">রবিবার (Sunday)</option>
-              <option value="সোমবার (Monday)">সোমবার (Monday)</option>
-              <option value="মঙ্গলবার (Tuesday)">মঙ্গলবার (Tuesday)</option>
-              <option value="বুধবার (Wednesday)">বুধবার (Wednesday)</option>
-              <option value="বৃহস্পতিবার (Thursday)">বৃহস্পতিবার (Thursday)</option>
+              <option value="Friday">শুক্রবার (Friday)</option>
+              <option value="Saturday">শনিবার (Saturday)</option>
+              <option value="Sunday">রবিবার (Sunday)</option>
+              <option value="Monday">সোমবার (Monday)</option>
+              <option value="Tuesday">মঙ্গলবার (Tuesday)</option>
+              <option value="Wednesday">বুধবার (Wednesday)</option>
+              <option value="Thursday">বৃহস্পতিবার (Thursday)</option>
             </select>
           </div>
           <button 
@@ -231,13 +231,13 @@ export const StaffManager: React.FC<Props> = ({ staff, setStaff, posts }) => {
                           onChange={e => setEditForm({...editForm, offDay: e.target.value})}
                         >
                           <option value="">--</option>
-                          <option value="শুক্রবার (Friday)">শুক্রবার</option>
-                          <option value="শনিবার (Saturday)">শনিবার</option>
-                          <option value="রবিবার (Sunday)">রবিবার</option>
-                          <option value="সোমবার (Monday)">সোমবার</option>
-                          <option value="মঙ্গলবার (Tuesday)">মঙ্গলবার</option>
-                          <option value="বুধবার (Wednesday)">বুধবার</option>
-                          <option value="বৃহস্পতিবার (Thursday)">বৃহস্পতিবার</option>
+                          <option value="Friday">শুক্রবার</option>
+                          <option value="Saturday">শনিবার</option>
+                          <option value="Sunday">রবিবার</option>
+                          <option value="Monday">সোমবার</option>
+                          <option value="Tuesday">মঙ্গলবার</option>
+                          <option value="Wednesday">বুধবার</option>
+                          <option value="Thursday">বৃহস্পতিবার</option>
                         </select>
                       </td>
                       <td className="px-6 py-3 text-right flex justify-end gap-2">

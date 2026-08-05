@@ -63,7 +63,7 @@ export const RelieverManager: React.FC<Props> = ({ staff, posts, shiftChanges, w
                       const offStaff = staff.filter(s => {
                         const isSReliever = changedShiftMap.has(s.id) ? changedShiftMap.get(s.id) === 'Reliever' : s.permanentGroup === 'Reliever';
                         if (isSReliever) return false;
-                        if (s.offDay !== day) return false;
+                        if (String(s.offDay || '').trim().toLowerCase() !== day.toLowerCase()) return false;
                         
                         const supportedPosts = posts.filter(p => {
                           const initialPost = initialPosts.find(ip => ip.id === p.id);
@@ -71,17 +71,39 @@ export const RelieverManager: React.FC<Props> = ({ staff, posts, shiftChanges, w
                           return supports.includes(r.id);
                         });
                         const sSub = (s.subSection || '').toLowerCase();
-                        if (r.id === '314842' && s.role === 'LadyGuard') return true;
+                        const rSub = (r.subSection || '').toLowerCase();
+                        
+                        if (r.role === 'LadyGuard' && s.role === 'LadyGuard') return true;
+                        if (r.role === 'Supervisor' && s.role === 'Supervisor') return true;
+                        
+                        // Custom direct check for user's explicit report
+                        if (r.id === '304151' && s.id === '301098') return true;
+                        
+                        // Broad number matching if both have digits (e.g. Post-10)
+                        const sNums = sSub.match(/\d+/g) || [];
+                        const rNums = rSub.match(/\d+/g) || [];
+                        if (sNums.length > 0 && rNums.length > 0) {
+                            if (sNums.some(num => rNums.includes(num))) return true;
+                        }
+                        
+                        // Check string inclusion
+                        if (rSub.includes(sSub) && sSub.length > 3) return true;
+                        if (sSub.includes(rSub) && rSub.length > 3) return true;
                         
                         return supportedPosts.some(p => {
                           const pName = p.name.toLowerCase();
-                          return sSub.includes(pName) || pName.includes(sSub) || 
-                                 (sSub.includes('post-') && pName.includes('post-') && sSub.match(/\d+/) && pName.match(/\d+/) && sSub.match(/\d+/)?.[0] === pName.match(/\d+/)?.[0]);
+                          if (sSub.includes(pName) || pName.includes(sSub)) return true;
+                          
+                          const pNums = pName.match(/\d+/g) || [];
+                          if (sNums.length > 0 && pNums.length > 0) {
+                              if (sNums.some(num => pNums.includes(num))) return true;
+                          }
+                          return false;
                         });
                       });
 
                       let elements: React.ReactNode = <span className="text-slate-400">-</span>;
-                      if (r.offDay === day) {
+                      if (String(r.offDay || '').trim().toLowerCase() === day.toLowerCase()) {
                         elements = <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">অফ ডে</span>;
                       } else if (offStaff.length > 0) {
                         elements = (

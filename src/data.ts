@@ -12,7 +12,7 @@ export const allStaff: Staff[] = [
   { id: '300081', name: 'Md. Shafiqul Islam', role: 'Guard', permanentGroup: 'Reliever', subSection: 'Post-6 + Shift- C', offDay: 'Saturday' },
   { id: '300914', name: 'Amena Begum', role: 'LadyGuard', permanentGroup: 'B', subSection: 'Post-1(Main Gate)', offDay: 'Friday' },
   { id: '300915', name: 'Abul Kalam', role: 'Guard', permanentGroup: 'A', subSection: 'Post-8 (Unit-01 middle Point)', offDay: 'Saturday' },
-  { id: '301098', name: 'Abdul Ahad', role: 'Guard', permanentGroup: 'C', subSection: 'Post-10 (Bangadoba Main Gate)', offDay: 'Tuesday' },
+  { id: '301098', name: 'Abdul Ahad', role: 'Guard', permanentGroup: 'C', subSection: 'Post-10 (Bangadoba Main Gate)', offDay: 'Saturday' },
   { id: '301129', name: 'Toslim Miah', role: 'Guard', permanentGroup: 'Reliever', subSection: 'Yarn Delivery', offDay: 'Friday' },
   { id: '301133', name: 'Jalal Miah', role: 'Guard', permanentGroup: 'C', subSection: 'Post-10 (Bangadoba Main Gate)', offDay: 'Friday' },
   { id: '304151', name: 'Md. Suhel Ahmod Sumon', role: 'Guard', permanentGroup: 'Reliever', subSection: 'Reliever + Post-10', offDay: 'Wednesday' },

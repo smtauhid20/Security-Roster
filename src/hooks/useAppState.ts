@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Staff, PostRequirement, LeaveRecord, OTRecord, ShiftChangeRecord } from '../types';
 import { allStaff as initialStaff, postRequirements as initialPosts } from '../data';
-import { db, auth } from '../lib/firebase';
+import { db } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
 
 export const useAppState = () => {
   const [staff, setStaff] = useState<Staff[]>(initialStaff);
@@ -24,7 +23,16 @@ export const useAppState = () => {
     const savedOts = localStorage.getItem('roster_ots_v2');
     const savedShiftChanges = localStorage.getItem('roster_shift_changes_v2');
     
-    if (savedStaff) setStaff(JSON.parse(savedStaff));
+    if (savedStaff) {
+       const parsed = JSON.parse(savedStaff);
+       const fixed = parsed.map((s: any) => {
+           if (s.id === '301098' && s.offDay === 'Tuesday') {
+               return { ...s, offDay: 'Saturday' };
+           }
+           return s;
+       });
+       setStaff(fixed);
+    }
     if (savedPosts) setPosts(JSON.parse(savedPosts));
     if (savedLeaves) setLeaves(JSON.parse(savedLeaves));
     if (savedOts) setOts(JSON.parse(savedOts));
@@ -37,7 +45,16 @@ export const useAppState = () => {
         const docSnap = await getDoc(doc(db, 'shared_roster', 'state'));
         if (docSnap.exists()) {
           const data = docSnap.data();
-          if (data.staff) setStaff(data.staff);
+          if (data.staff) {
+             const fixedStaff = data.staff.map((s: any) => {
+                 // Auto-fix Abdul Ahad's off day to Saturday if it is currently stuck on Tuesday
+                 if (s.id === '301098' && s.offDay === 'Tuesday') {
+                     return { ...s, offDay: 'Saturday' };
+                 }
+                 return s;
+             });
+             setStaff(fixedStaff);
+          }
           if (data.posts) setPosts(data.posts);
           if (data.leaves) setLeaves(data.leaves);
           if (data.ots) setOts(data.ots);

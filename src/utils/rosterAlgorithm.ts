@@ -149,6 +149,10 @@ export const generateWeeklyRoster = (
     if (replacementId && leave.shiftType && leave.postName) {
       const replacementStaff = allStaff.find(s => s.id === replacementId);
       if (replacementStaff && !onLeaveIds.has(replacementStaff.id)) {
+        // Find actual running shift for the leave
+        const targetGroup = leave.shiftType;
+        const actualRunningShift = targetGroup === 'General' ? 'General' : getAssignedShift(targetGroup as PermanentGroup);
+
         // Remove from normal pool
         (['A', 'B', 'C', 'General'] as ShiftType[]).forEach(shift => {
           const idx = shiftPools[shift].findIndex(s => s.id === replacementStaff.id);
@@ -160,17 +164,10 @@ export const generateWeeklyRoster = (
           staffName: replacementStaff.name,
           role: replacementStaff.role,
           permanentGroup: replacementStaff.permanentGroup,
-          assignedShift: leave.shiftType,
+          assignedShift: actualRunningShift,
           assignedPost: leave.postName,
           isReplacement: true
         });
-        
-        // Temporarily reduce the requirement count for this specific post/shift combination
-        const req = postRequirements.find(p => p.name === leave.postName);
-        if (req && req.shiftCounts[leave.shiftType] > 0) {
-           // We mutate a copy if we want to be pure, but since we map inside assignPostsForShift, 
-           // we can just let it assign one less. Let's handle it strictly in assignPostsForShift by tracking assigned counts.
-        }
       }
     }
   });
