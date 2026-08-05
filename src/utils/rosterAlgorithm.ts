@@ -47,17 +47,32 @@ export const generateWeeklyRoster = (
   };
   
   const relievers: Staff[] = [];
-  const onLeaveIds = new Set(weekLeaves.map(l => l.staffId));
+  const fullWeekLeaveIds = new Set(weekLeaves.filter(l => !l.endDate).map(l => l.staffId));
+  const partialLeaves = weekLeaves.filter(l => !!l.endDate);
+  const onLeaveIds = new Set(weekLeaves.map(l => l.staffId)); // keep for some fallback checks
   const changedShiftMap = new Map<string, ShiftType>();
+  const partialShiftChangeMap = new Map<string, ShiftChangeRecord>();
+  
   weekShiftChanges.forEach(sc => {
-    changedShiftMap.set(sc.staffId, sc.targetShift);
-    if (sc.swappedWithStaffId && sc.swappedFromShift) {
-      changedShiftMap.set(sc.swappedWithStaffId, sc.swappedFromShift);
+    if (sc.endDate) {
+      partialShiftChangeMap.set(sc.staffId, sc);
+      if (sc.swappedWithStaffId && sc.swappedFromShift) {
+        partialShiftChangeMap.set(sc.swappedWithStaffId, {
+          ...sc,
+          staffId: sc.swappedWithStaffId,
+          targetShift: sc.swappedFromShift
+        });
+      }
+    } else {
+      changedShiftMap.set(sc.staffId, sc.targetShift);
+      if (sc.swappedWithStaffId && sc.swappedFromShift) {
+        changedShiftMap.set(sc.swappedWithStaffId, sc.swappedFromShift);
+      }
     }
   });
 
   allStaff.forEach(staff => {
-    if (onLeaveIds.has(staff.id)) {
+    if (fullWeekLeaveIds.has(staff.id)) {
       shiftPools.Leave.push(staff);
       roster.push({
         staffId: staff.id,
@@ -110,10 +125,13 @@ export const generateWeeklyRoster = (
     }
   });
 
-  // Distribute remaining relievers to hit exact targets: A (12), B (14), C (16)
-  const TARGET_A = 12;
-  const TARGET_B = 14;
-  const TARGET_C = 16;
+  // Distribute remaining relievers to hit exact targets based on post requirements
+  let TARGET_A = 0, TARGET_B = 0, TARGET_C = 0;
+  postRequirements.forEach(p => {
+    TARGET_A += p.shiftCounts.A || 0;
+    TARGET_B += p.shiftCounts.B || 0;
+    TARGET_C += p.shiftCounts.C || 0;
+  });
 
   unassignedRelievers.forEach(r => {
     if (shiftPools.A.length < TARGET_A) {
@@ -153,11 +171,13 @@ export const generateWeeklyRoster = (
         const targetGroup = leave.shiftType;
         const actualRunningShift = targetGroup === 'General' ? 'General' : getAssignedShift(targetGroup as PermanentGroup);
 
-        // Remove from normal pool
-        (['A', 'B', 'C', 'General'] as ShiftType[]).forEach(shift => {
-          const idx = shiftPools[shift].findIndex(s => s.id === replacementStaff.id);
-          if (idx !== -1) shiftPools[shift].splice(idx, 1);
-        });
+        // Remove from normal pool ONLY if the leave is full week
+        if (!leave.endDate) {
+          (['A', 'B', 'C', 'General'] as ShiftType[]).forEach(shift => {
+            const idx = shiftPools[shift].findIndex(s => s.id === replacementStaff.id);
+            if (idx !== -1) shiftPools[shift].splice(idx, 1);
+          });
+        }
         
         roster.push({
           staffId: replacementStaff.id,
@@ -170,6 +190,29 @@ export const generateWeeklyRoster = (
         });
       }
     }
+  });
+
+  // Add partial shift change extra assignments to roster before finalizing
+  partialShiftChangeMap.forEach((sc, staffId) => {
+      const staff = allStaff.find(s => s.id === staffId);
+      if (staff && !fullWeekLeaveIds.has(staff.id)) {
+         const targetGroup = sc.targetShift as PermanentGroup;
+         const actualRunningShift = targetGroup === 'General' ? 'General' : 
+           (targetGroup === 'Reliever' ? 'Reliever' : getAssignedShift(targetGroup));
+           
+         if (['A', 'B', 'C', 'General'].includes(actualRunningShift)) {
+           roster.push({
+              staffId: staff.id,
+              staffName: staff.name,
+              role: staff.role,
+              permanentGroup: staff.permanentGroup,
+              assignedShift: actualRunningShift as ShiftType,
+              assignedPost: sc.targetPost || 'অস্থায়ী ডিউটি',
+              isShiftChange: true,
+              shiftChangeDates: `${sc.startDate} হতে ${sc.endDate}`
+           });
+         }
+      }
   });
 
   const assignPostsForShift = (shift: ShiftType, pool: Staff[]) => {
@@ -203,6 +246,9 @@ export const generateWeeklyRoster = (
         
         const staff = availableStaff.splice(staffIndex, 1)[0];
         
+        const pLeave = partialLeaves.find(l => l.staffId === staff.id);
+        const pShiftChange = partialShiftChangeMap.get(staff.id);
+
         roster.push({
           staffId: staff.id,
           staffName: staff.name,
@@ -210,13 +256,19 @@ export const generateWeeklyRoster = (
           permanentGroup: staff.permanentGroup,
           assignedShift: shift,
           assignedPost: req.name,
-          offDay: staff.offDay
+          offDay: staff.offDay,
+          leaveStartDate: pLeave?.startDate,
+          leaveEndDate: pLeave?.endDate,
+          isShiftChange: !!pShiftChange,
+          shiftChangeDates: pShiftChange ? `${pShiftChange.startDate} হতে ${pShiftChange.endDate} (${pShiftChange.targetShift} শিফট)` : undefined
         });
         needed--;
       }
     });
     
     availableStaff.forEach(staff => {
+      const pLeave = partialLeaves.find(l => l.staffId === staff.id);
+      const pShiftChange = partialShiftChangeMap.get(staff.id);
       // For remaining staff, if they have a subSection, let's try to assign them to it, otherwise 'অতিরিক্ত / রিজার্ভ'
       roster.push({
         staffId: staff.id,
@@ -225,7 +277,11 @@ export const generateWeeklyRoster = (
         permanentGroup: staff.permanentGroup,
         assignedShift: shift,
         assignedPost: staff.subSection || 'অতিরিক্ত / রিজার্ভ',
-        offDay: staff.offDay
+        offDay: staff.offDay,
+        leaveStartDate: pLeave?.startDate,
+        leaveEndDate: pLeave?.endDate,
+        isShiftChange: !!pShiftChange,
+        shiftChangeDates: pShiftChange ? `${pShiftChange.startDate} হতে ${pShiftChange.endDate} (${pShiftChange.targetShift} শিফট)` : undefined
       });
     });
   };

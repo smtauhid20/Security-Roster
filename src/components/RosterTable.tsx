@@ -1,16 +1,18 @@
+import { DailyManpowerStatus } from './DailyManpowerStatus';
 import React, { useMemo } from 'react';
-import { RosterAssignment, ShiftType } from '../types';
+import { RosterAssignment, ShiftType, PostRequirement } from '../types';
 import { Clock, RefreshCcw } from 'lucide-react';
 
 interface Props {
   roster: RosterAssignment[];
   weekNumber: number;
   startDate: string;
+  posts: PostRequirement[];
 }
 
 import { getEndDate, formatDisplayDate } from '../utils/dateUtils';
 
-export const RosterTable: React.FC<Props> = ({ roster, weekNumber, startDate }) => {
+export const RosterTable: React.FC<Props> = ({ roster, weekNumber, startDate, posts }) => {
   // Group by Shift
   const grouped = useMemo(() => {
     const map: Record<ShiftType | 'OT', RosterAssignment[]> = {
@@ -37,6 +39,16 @@ export const RosterTable: React.FC<Props> = ({ roster, weekNumber, startDate }) 
     
     return map;
   }, [roster]);
+
+  const targets = useMemo(() => {
+    let A = 0, B = 0, C = 0;
+    posts.forEach(p => {
+      A += p.shiftCounts.A || 0;
+      B += p.shiftCounts.B || 0;
+      C += p.shiftCounts.C || 0;
+    });
+    return { A, B, C };
+  }, [posts]);
 
   const shiftDetails = {
     A: { title: 'A (Morning)', time: 'সকাল ৭টা - বিকাল ৩টা', color: 'bg-emerald-100 text-emerald-800' },
@@ -66,6 +78,7 @@ export const RosterTable: React.FC<Props> = ({ roster, weekNumber, startDate }) 
 
   return (
     <div className="space-y-8">
+      <DailyManpowerStatus roster={roster} startDate={startDate} posts={posts} />
       {/* Printable Header */}
       <div className="hidden print:block mb-8 text-center border-b-2 border-slate-800 pb-4">
         <h1 className="text-2xl font-bold text-slate-900 mb-2">সাপ্তাহিক ডিউটি রোস্টার</h1>
@@ -93,9 +106,23 @@ export const RosterTable: React.FC<Props> = ({ roster, weekNumber, startDate }) 
                   </h2>
                 )}
               </div>
-              <span className="text-sm font-semibold px-3 py-1 bg-white/40 rounded-full">
-                Total: {assignments.length} জন
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold px-3 py-1 bg-white/40 rounded-full">
+                  Total: {assignments.length} জন
+                </span>
+                {['A', 'B', 'C'].includes(shift) && (
+                  <span className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                    assignments.length === (shift === 'A' ? targets.A : shift === 'B' ? targets.B : targets.C) ? 'bg-emerald-200/50 text-emerald-900' :
+                    assignments.length > (shift === 'A' ? targets.A : shift === 'B' ? targets.B : targets.C) ? 'bg-indigo-200/50 text-indigo-900' :
+                    'bg-rose-200/60 text-rose-900'
+                  }`}>
+                    {assignments.length === (shift === 'A' ? targets.A : shift === 'B' ? targets.B : targets.C) ? '✓ সঠিক' : 
+                     assignments.length > (shift === 'A' ? targets.A : shift === 'B' ? targets.B : targets.C) ? 
+                     `+${assignments.length - (shift === 'A' ? targets.A : shift === 'B' ? targets.B : targets.C)} জন বেশি` : 
+                     `${(shift === 'A' ? targets.A : shift === 'B' ? targets.B : targets.C) - assignments.length} জন শর্ট`}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
@@ -118,24 +145,30 @@ export const RosterTable: React.FC<Props> = ({ roster, weekNumber, startDate }) 
                         {row.role === 'Guard' ? 'সিকিউরিটি গার্ড' : row.role === 'LadyGuard' ? 'লেডি গার্ড' : row.role === 'Supervisor' ? 'সুপারভাইজর' : 'অফিসার'}
                       </td>
                       <td className="px-6 py-3 font-semibold text-slate-700">
-                        {shift === 'Leave' ? (
-                          <div className="flex flex-col">
-                            <span className="text-rose-600">{row.assignedPost}</span>
-                            {row.originalPost && <span className="text-xs text-slate-500 font-normal mt-0.5">মূল পোস্ট: {row.originalPost}</span>}
-                            {(row.leaveStartDate || row.leaveEndDate) && (
-                              <span className="text-xs text-slate-500 font-normal mt-0.5">
-                                তারিখ: {row.leaveStartDate ? formatDisplayDate(row.leaveStartDate) : '?'} হতে {row.leaveEndDate ? formatDisplayDate(row.leaveEndDate) : '?'} 
-                                {row.leaveStartDate && row.leaveEndDate && (
-                                  <span className="ml-1 px-1.5 py-0.5 bg-slate-100 rounded text-[10px]">
-                                    ({Math.ceil((new Date(row.leaveEndDate).getTime() - new Date(row.leaveStartDate).getTime()) / (1000 * 3600 * 24)) + 1} দিন)
-                                  </span>
-                                )}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          row.assignedPost
-                        )}
+                        <div className="flex flex-col">
+                          <span className={shift === 'Leave' ? "text-rose-600" : ""}>{row.assignedPost}</span>
+                          {shift === 'Leave' && row.originalPost && <span className="text-xs text-slate-500 font-normal mt-0.5">মূল পোস্ট: {row.originalPost}</span>}
+                          
+                          {/* If partial leave in normal shift, or full leave */}
+                          {(row.leaveStartDate || row.leaveEndDate) && (
+                            <span className="text-xs text-rose-500 font-medium mt-0.5">
+                              {shift !== 'Leave' ? 'ছুটি: ' : 'তারিখ: '} 
+                              {row.leaveStartDate ? formatDisplayDate(row.leaveStartDate) : '?'} হতে {row.leaveEndDate ? formatDisplayDate(row.leaveEndDate) : '?'}
+                              {row.leaveStartDate && row.leaveEndDate && (
+                                <span className="ml-1 px-1.5 py-0.5 bg-rose-50 text-rose-700 rounded text-[10px]">
+                                  ({Math.ceil((new Date(row.leaveEndDate).getTime() - new Date(row.leaveStartDate).getTime()) / (1000 * 3600 * 24)) + 1} দিন)
+                                </span>
+                              )}
+                            </span>
+                          )}
+                          
+                          {/* If partial shift change */}
+                          {row.isShiftChange && row.shiftChangeDates && (
+                            <span className="text-xs text-purple-600 font-medium mt-0.5">
+                              অস্থায়ী শিফট: {row.shiftChangeDates}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-3 text-slate-600">{row.offDay || '-'}</td>
                       <td className="px-6 py-3 text-right">
@@ -155,7 +188,7 @@ export const RosterTable: React.FC<Props> = ({ roster, weekNumber, startDate }) 
                           )}
                           {row.isShiftChange && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800" title={row.shiftChangeDates}>
-                              <RefreshCcw className="w-3 h-3" /> শিফট পরিবর্তন {row.shiftChangeDates ? `(${row.shiftChangeDates})` : ''}
+                              <RefreshCcw className="w-3 h-3" /> বদলি ডিউটি
                             </span>
                           )}
                         </div>
