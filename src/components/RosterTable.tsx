@@ -1,6 +1,6 @@
 import { DailyManpowerStatus } from './DailyManpowerStatus';
 import React, { useMemo } from 'react';
-import { RosterAssignment, ShiftType, PostRequirement } from '../types';
+import { RosterAssignment, ShiftType, PostRequirement, Staff } from '../types';
 import { Clock, RefreshCcw } from 'lucide-react';
 
 interface Props {
@@ -8,11 +8,12 @@ interface Props {
   weekNumber: number;
   startDate: string;
   posts: PostRequirement[];
+  staff: Staff[];
 }
 
 import { getEndDate, formatDisplayDate } from '../utils/dateUtils';
 
-export const RosterTable: React.FC<Props> = ({ roster, weekNumber, startDate, posts }) => {
+export const RosterTable: React.FC<Props> = ({ roster, weekNumber, startDate, posts, staff }) => {
   // Group by Shift
   const grouped = useMemo(() => {
     const map: Record<ShiftType | 'OT', RosterAssignment[]> = {
@@ -78,7 +79,7 @@ export const RosterTable: React.FC<Props> = ({ roster, weekNumber, startDate, po
 
   return (
     <div className="space-y-8">
-      <DailyManpowerStatus roster={roster} startDate={startDate} posts={posts} />
+      <DailyManpowerStatus roster={roster} startDate={startDate} posts={posts} staff={staff} />
       {/* Printable Header */}
       <div className="hidden print:block mb-8 text-center border-b-2 border-slate-800 pb-4">
         <h1 className="text-2xl font-bold text-slate-900 mb-2">সাপ্তাহিক ডিউটি রোস্টার</h1>

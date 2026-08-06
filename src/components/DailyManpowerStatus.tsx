@@ -1,13 +1,15 @@
 import React, { useMemo } from 'react';
-import { RosterAssignment, PostRequirement } from '../types';
+import { RosterAssignment, PostRequirement, Staff } from '../types';
+import { postRequirements as initialPosts } from '../data';
 
 interface Props {
   roster: RosterAssignment[];
   startDate: string;
   posts: PostRequirement[];
+  staff: Staff[];
 }
 
-export const DailyManpowerStatus: React.FC<Props> = ({ roster, startDate, posts }) => {
+export const DailyManpowerStatus: React.FC<Props> = ({ roster, startDate, posts, staff }) => {
   const days = useMemo(() => {
     const start = new Date(startDate);
     return Array.from({ length: 7 }, (_, i) => {

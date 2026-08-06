@@ -169,7 +169,7 @@ export default function App() {
               </div>
             </div>
 
-            <RosterTable roster={roster} weekNumber={weekNumber} startDate={startDate} posts={posts} />
+            <RosterTable roster={roster} weekNumber={weekNumber} startDate={startDate} posts={posts} staff={staff} />
             <RelieverManager staff={staff} posts={posts} shiftChanges={shiftChanges} weekNumber={weekNumber} />
           </div>
         )}
