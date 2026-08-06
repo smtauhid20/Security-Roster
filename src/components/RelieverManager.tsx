@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Staff, PostRequirement, ShiftChangeRecord } from '../types';
 import { postRequirements as initialPosts } from '../data';
 
@@ -26,15 +26,107 @@ export const RelieverManager: React.FC<Props> = ({ staff, posts, shiftChanges, w
     }
     return s.permanentGroup === 'Reliever';
   });
+
   const days = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-  // Identify all support persons and their status
-  const supportPersonsList = posts.flatMap(p => {
+  const uniqueSupportPersonIds = Array.from(new Set(posts.flatMap(p => {
     const initialPost = initialPosts.find(ip => ip.id === p.id);
     return p.supportPersons || (initialPost ? initialPost.supportPersons : []) || [];
-  });
-  const uniqueSupportPersonIds = Array.from(new Set(supportPersonsList)).filter(id => id);
+  })));
+  
   const supportPersons = uniqueSupportPersonIds.map(id => staff.find(s => s.id === id)).filter(Boolean) as Staff[];
+
+  const assignmentsByDay = useMemo(() => {
+    const assignments = new Map<string, Map<string, Staff[]>>();
+
+    const extractPostNumbers = (str: string): string[] => {
+       const nums: string[] = [];
+       const regex = /(?:post|rg)[-\s]*([\d\s,&and]+)/gi;
+       let match;
+       while ((match = regex.exec(str)) !== null) {
+           const extracted = match[1].match(/\d+/g);
+           if (extracted) {
+               const prefix = match[0].toLowerCase().includes('rg') ? 'rg' : 'post';
+               nums.push(...extracted.map(n => prefix + '-' + parseInt(n, 10).toString()));
+           }
+       }
+       if (nums.length === 0) {
+           const allNums = str.match(/\d+/g);
+           if (allNums && str.toLowerCase().includes('post')) {
+               nums.push(...allNums.map(n => 'post-' + parseInt(n, 10).toString()));
+           }
+       }
+       return nums;
+    };
+
+    days.forEach(day => {
+      const dayAssignments = new Map<string, Staff[]>();
+      const assignedThisDay = new Set<string>();
+      
+      const unassignedOffStaff = staff.filter(s => {
+         const isSReliever = changedShiftMap.has(s.id) ? changedShiftMap.get(s.id) === 'Reliever' : s.permanentGroup === 'Reliever';
+         if (isSReliever) return false;
+         if (String(s.offDay || '').trim().toLowerCase() !== day.toLowerCase()) return false;
+         return true;
+      });
+
+      relievers.forEach(r => {
+          if (String(r.offDay || '').trim().toLowerCase() === day.toLowerCase()) return;
+          
+          const covered: Staff[] = [];
+          for (let i = unassignedOffStaff.length - 1; i >= 0; i--) {
+              const s = unassignedOffStaff[i];
+              if (assignedThisDay.has(s.id)) continue;
+              
+              const supportedPosts = posts.filter(p => {
+                const initialPost = initialPosts.find(ip => ip.id === p.id);
+                const supports = p.supportPersons || (initialPost ? initialPost.supportPersons : []) || [];
+                return supports.includes(r.id);
+              });
+              
+              const sSub = (s.subSection || '').toLowerCase();
+              const rSub = (r.subSection || '').toLowerCase();
+              
+              let matches = false;
+              if (r.role !== s.role) {
+                  matches = false;
+              } else {
+                  const sTags = extractPostNumbers(sSub);
+                  const rTags = extractPostNumbers(rSub);
+                  
+                  if (sTags.length > 0 && rTags.length > 0) {
+                      if (sTags.some(tag => rTags.includes(tag))) matches = true;
+                  }
+                  
+                  if (!matches && sTags.length === 0 && rTags.length === 0) {
+                      if (rSub && sSub && (rSub.includes(sSub) || sSub.includes(rSub)) && sSub.length > 3) matches = true;
+                  }
+                  
+                  if (!matches) {
+                    matches = supportedPosts.some(p => {
+                      const pTags = extractPostNumbers(p.name);
+                      if (sTags.length > 0 && pTags.length > 0) {
+                          if (sTags.some(tag => pTags.includes(tag))) return true;
+                      }
+                      const pName = p.name.toLowerCase();
+                      if (sSub.includes(pName) || pName.includes(sSub)) return true;
+                      return false;
+                    });
+                  }
+              }
+
+              if (matches) {
+                 covered.push(s);
+                 assignedThisDay.add(s.id);
+                 unassignedOffStaff.splice(i, 1);
+              }
+          }
+          dayAssignments.set(r.id, covered);
+      });
+      assignments.set(day, dayAssignments);
+    });
+    return assignments;
+  }, [staff, relievers, days, changedShiftMap, posts]);
 
   return (
     <div className="space-y-8">
@@ -59,66 +151,8 @@ export const RelieverManager: React.FC<Props> = ({ staff, posts, shiftChanges, w
                     <td className="px-4 py-3 font-medium text-slate-800">{r.name} ({r.id})</td>
                     <td className="px-4 py-3 text-slate-600">{r.subSection}</td>
                     {days.map(day => {
-                      // Find staff who are off on this day and whose subSection matches what this reliever covers
-                      const offStaff = staff.filter(s => {
-                        const isSReliever = changedShiftMap.has(s.id) ? changedShiftMap.get(s.id) === 'Reliever' : s.permanentGroup === 'Reliever';
-                        if (isSReliever) return false;
-                        if (String(s.offDay || '').trim().toLowerCase() !== day.toLowerCase()) return false;
-                        
-                        const supportedPosts = posts.filter(p => {
-                          const initialPost = initialPosts.find(ip => ip.id === p.id);
-                          const supports = p.supportPersons || (initialPost ? initialPost.supportPersons : []) || [];
-                          return supports.includes(r.id);
-                        });
-                        const sSub = (s.subSection || '').toLowerCase();
-                        const rSub = (r.subSection || '').toLowerCase();
-                        
-                        if (r.role === 'LadyGuard' && s.role === 'LadyGuard') return true;
-                        if (r.role === 'Supervisor' && s.role === 'Supervisor') return true;
-                        
-                        const extractPostNumbers = (str: string): string[] => {
-                           const nums = [];
-                           const regex = /(?:post|rg)[-\s]*([\d\s,&and]+)/gi;
-                           let match;
-                           while ((match = regex.exec(str)) !== null) {
-                               const extracted = match[1].match(/\d+/g);
-                               if (extracted) {
-                                   const prefix = match[0].toLowerCase().includes('rg') ? 'rg' : 'post';
-                                   nums.push(...extracted.map(n => prefix + '-' + parseInt(n).toString()));
-                               }
-                           }
-                           if (nums.length === 0) {
-                               const allNums = str.match(/\d+/g);
-                               if (allNums && str.toLowerCase().includes('post')) {
-                                   nums.push(...allNums.map(n => 'post-' + parseInt(n).toString()));
-                               }
-                           }
-                           return nums;
-                        };
-
-                        const sTags = extractPostNumbers(sSub);
-                        const rTags = extractPostNumbers(rSub);
-                        
-                        if (sTags.length > 0 && rTags.length > 0) {
-                            if (sTags.some(tag => rTags.includes(tag))) return true;
-                        }
-                        
-                        if (sTags.length === 0 && rTags.length === 0) {
-                            if (rSub && sSub && (rSub.includes(sSub) || sSub.includes(rSub)) && sSub.length > 3) return true;
-                        }
-
-                        // Also check supportedPosts based on initial data
-                        return supportedPosts.some(p => {
-                          const pTags = extractPostNumbers(p.name);
-                          if (sTags.length > 0 && pTags.length > 0) {
-                              if (sTags.some(tag => pTags.includes(tag))) return true;
-                          }
-                          const pName = p.name.toLowerCase();
-                          if (sSub.includes(pName) || pName.includes(sSub)) return true;
-                          return false;
-                        });
-                      });
-
+                      const offStaff = assignmentsByDay.get(day)?.get(r.id) || [];
+                      
                       let elements: React.ReactNode = <span className="text-slate-400">-</span>;
                       if (String(r.offDay || '').trim().toLowerCase() === day.toLowerCase()) {
                         elements = <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">অফ ডে</span>;

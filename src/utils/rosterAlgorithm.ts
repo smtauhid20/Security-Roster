@@ -208,6 +208,7 @@ export const generateWeeklyRoster = (
               permanentGroup: staff.permanentGroup,
               assignedShift: actualRunningShift as ShiftType,
               assignedPost: sc.targetPost || 'অস্থায়ী ডিউটি',
+              offDay: staff.offDay,
               isShiftChange: true,
               shiftChangeDates: `${sc.startDate} হতে ${sc.endDate}`
            });
